@@ -15,6 +15,8 @@ class UserResponse(BaseModel):
     id: UUID
     full_name: str
     email: str
+    trust_score: int
+    role: str
 
     class Config:
         from_attributes = True

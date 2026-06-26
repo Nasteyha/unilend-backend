@@ -6,12 +6,10 @@ from app.schemas.user import UserRegister, UserResponse
 from app.schemas.auth import LoginRequest, TokenResponse
 from app.utils.jwt import create_access_token, verify_access_token
 from passlib.context import CryptContext
-from fastapi.security import OAuth2PasswordBearer
-
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 router = APIRouter(prefix="/auth", tags=["Authentication"])
-
+security = HTTPBearer()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
@@ -19,7 +17,8 @@ def hash_password(password: str) -> str:
 def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+    token = credentials.credentials
     payload = verify_access_token(token)
     if not payload:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
