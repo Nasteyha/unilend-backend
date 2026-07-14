@@ -26,5 +26,6 @@ class Item(Base):
     status = Column(SAEnum(ItemStatus), nullable=False, default=ItemStatus.available)
     owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     max_borrow_days = Column(Integer, nullable=False, default=14)
+    image_url = Column(String, nullable=True)
     
     owner = relationship("User", back_populates="items")

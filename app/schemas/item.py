@@ -18,6 +18,7 @@ class ItemCreate(BaseModel):
     category: str
     risk_level: RiskLevel
     max_borrow_days: int = 14
+    image_url: str | None = None
     
 
 class ItemResponse(BaseModel):
@@ -29,6 +30,7 @@ class ItemResponse(BaseModel):
     status: ItemStatus
     owner_id: UUID
     max_borrow_days: int
+    image_url: str | None = None
 
     class Config:
         from_attributes = True

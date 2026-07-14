@@ -4,10 +4,11 @@ from app.database import get_db
 from app.models.borrow_request import BorrowRequest, RequestStatus
 from app.models.item import Item, ItemStatus, RiskLevel
 from app.models.user import User
-from app.schemas.borrow_request import BorrowRequestCreate, BorrowRequestResponse
+from app.schemas.borrow_request import BorrowRequestCreate, BorrowRequestResponse, ReceivedRequestResponse, MyRequestResponse
 from app.routes.auth import get_current_user
 from datetime import datetime, timedelta
 from uuid import UUID
+from typing import List
 
 router = APIRouter(prefix="/borrow-requests", tags=["borrow requests"])
 
@@ -77,6 +78,24 @@ def create_borrow_request(
     db.refresh(new_request)
     return new_request
 
+@router.get("/mine", response_model=List[MyRequestResponse])
+def get_my_requests(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    requests = db.query(BorrowRequest).filter(
+        BorrowRequest.borrower_id == current_user.id
+    ).all()
+
+    result = []
+    for r in requests:
+        result.append(MyRequestResponse(
+            id=r.id,
+            status=r.status,
+            requested_at=r.requested_at,
+            return_deadline=r.return_deadline,
+            item_id=r.item_id,
+            item_title=r.item.title,
+        ))
+    return result
+
 @router.put("/{request_id}/approve", response_model=BorrowRequestResponse)
 def approve_request(request_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     # find the request
@@ -124,3 +143,30 @@ def reject_request(request_id: UUID, db: Session = Depends(get_db), current_user
     db.commit()
     db.refresh(borrow_request)
     return borrow_request
+
+@router.get("/received", response_model=List[ReceivedRequestResponse])
+def get_received_requests(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    # find all items owned by the current user
+    my_item_ids = [item.id for item in db.query(Item).filter(Item.owner_id == current_user.id).all()]
+
+    # find all pending requests for those items
+    requests = db.query(BorrowRequest).filter(
+        BorrowRequest.item_id.in_(my_item_ids),
+        BorrowRequest.status == RequestStatus.pending,
+    ).all()
+
+    # build the enriched response for each request
+    result = []
+    for r in requests:
+        result.append(ReceivedRequestResponse(
+            id=r.id,
+            status=r.status,
+            requested_at=r.requested_at,
+            return_deadline=r.return_deadline,
+            item_id=r.item_id,
+            item_title=r.item.title,
+            borrower_id=r.borrower_id,
+            borrower_name=r.borrower.full_name,
+            borrower_trust_score=r.borrower.trust_score,
+        ))
+    return result

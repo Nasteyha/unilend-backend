@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.item import Item, RiskLevel, ItemStatus
@@ -7,6 +7,15 @@ from app.schemas.item import ItemCreate, ItemResponse, ItemUpdate
 from app.routes.auth import get_current_user
 from typing import List
 from uuid import UUID
+import cloudinary
+import cloudinary.uploader
+from app.config import settings
+
+cloudinary.config(
+    cloud_name=settings.CLOUDINARY_CLOUD_NAME,
+    api_key=settings.CLOUDINARY_API_KEY,
+    api_secret=settings.CLOUDINARY_API_SECRET,
+)
 
 router = APIRouter(prefix="/items", tags=["items"])
 
@@ -19,7 +28,8 @@ def create_item(item: ItemCreate, db: Session = Depends(get_db), current_user: U
         risk_level=item.risk_level,
         status=ItemStatus.available,
         owner_id=current_user.id,
-        max_borrow_days=item.max_borrow_days
+        max_borrow_days=item.max_borrow_days,
+        image_url=item.image_url,
     )
     db.add(new_item)
     db.commit()
@@ -64,3 +74,21 @@ def delete_item(item_id: UUID, db: Session = Depends(get_db), current_user: User
     db.delete(item)
     db.commit()
     return {"message": "Item deleted successfully"}
+
+@router.post("/upload-image")
+def upload_item_image(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    try:
+        result = cloudinary.uploader.upload(
+            file.file,
+            folder="unilend_items",
+        )
+    except Exception:
+        raise HTTPException(status_code=500, detail="Image upload failed")
+
+    return {"image_url": result["secure_url"]}

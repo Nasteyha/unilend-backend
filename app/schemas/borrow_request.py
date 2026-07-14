@@ -20,5 +20,24 @@ class BorrowRequestResponse(BaseModel):
     requested_at: datetime
     return_deadline: datetime | None
 
+class ReceivedRequestResponse(BaseModel):
+    id: UUID
+    status: RequestStatus
+    requested_at: datetime
+    return_deadline: datetime | None
+    item_id: UUID
+    item_title: str
+    borrower_id: UUID
+    borrower_name: str
+    borrower_trust_score: int
+
+class MyRequestResponse(BaseModel):
+    id: UUID
+    status: RequestStatus
+    requested_at: datetime
+    return_deadline: datetime | None
+    item_id: UUID
+    item_title: str
+
     class Config:
         from_attributes = True
