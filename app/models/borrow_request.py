@@ -10,7 +10,7 @@ class RequestStatus(enum.Enum):
     pending = "pending"
     approved = "approved"
     rejected = "rejected"
-
+    returned = "returned"
 class BorrowRequest(Base):
     __tablename__ = "borrow_requests"
 

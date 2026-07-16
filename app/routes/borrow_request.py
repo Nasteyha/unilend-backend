@@ -9,6 +9,8 @@ from app.routes.auth import get_current_user
 from datetime import datetime, timedelta
 from uuid import UUID
 from typing import List
+from app.models.transaction import Transaction, TransactionStatus
+from app.services.trust import update_trust_score
 
 router = APIRouter(prefix="/borrow-requests", tags=["borrow requests"])
 
@@ -116,6 +118,13 @@ def approve_request(request_id: UUID, db: Session = Depends(get_db), current_use
     borrow_request.status = RequestStatus.approved
     item.status = ItemStatus.borrowed
 
+    # the approval is the handover moment: open a transaction
+    new_transaction = Transaction(
+        borrow_request_id=borrow_request.id,
+        status=TransactionStatus.active,
+    )
+    db.add(new_transaction)
+
     db.commit()
     db.refresh(borrow_request)
     return borrow_request
@@ -152,7 +161,7 @@ def get_received_requests(db: Session = Depends(get_db), current_user: User = De
     # find all pending requests for those items
     requests = db.query(BorrowRequest).filter(
         BorrowRequest.item_id.in_(my_item_ids),
-        BorrowRequest.status == RequestStatus.pending,
+        BorrowRequest.status.in_([RequestStatus.pending, RequestStatus.approved]),
     ).all()
 
     # build the enriched response for each request
@@ -170,3 +179,50 @@ def get_received_requests(db: Session = Depends(get_db), current_user: User = De
             borrower_trust_score=r.borrower.trust_score,
         ))
     return result
+
+@router.put("/{request_id}/return", response_model=BorrowRequestResponse)
+def mark_returned(request_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    # find the request
+    borrow_request = db.query(BorrowRequest).filter(BorrowRequest.id == request_id).first()
+    if not borrow_request:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    # only approved requests can be returned
+    if borrow_request.status != RequestStatus.approved:
+        raise HTTPException(status_code=400, detail="Only approved requests can be marked as returned")
+
+    # only the item's owner can confirm the return
+    item = db.query(Item).filter(Item.id == borrow_request.item_id).first()
+    if item.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You can only confirm returns for your own items")
+
+    # find the open transaction for this request
+    transaction = db.query(Transaction).filter(
+        Transaction.borrow_request_id == borrow_request.id,
+        Transaction.status == TransactionStatus.active,
+    ).first()
+    if not transaction:
+        raise HTTPException(status_code=404, detail="No active transaction found for this request")
+
+    # record the return and decide: on time or late?
+    now = datetime.utcnow()
+    transaction.returned_at = now
+    if borrow_request.return_deadline and now > borrow_request.return_deadline:
+        transaction.status = TransactionStatus.returned_late
+    else:
+        transaction.status = TransactionStatus.returned
+
+    # the item goes back on the shelf
+    item.status = ItemStatus.available
+
+    borrow_request.status = RequestStatus.returned
+    
+    # the trust engine reacts to the outcome
+    borrower = db.query(User).filter(User.id == borrow_request.borrower_id).first()
+    update_trust_score(borrower, transaction)
+
+    db.commit()
+
+    db.commit()
+    db.refresh(borrow_request)
+    return borrow_request

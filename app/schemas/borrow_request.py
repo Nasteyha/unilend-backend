@@ -7,6 +7,7 @@ class RequestStatus(str, Enum):
     pending = "pending"
     approved = "approved"
     rejected = "rejected"
+    returned = "returned"
 
 class BorrowRequestCreate(BaseModel):
     item_id: UUID
