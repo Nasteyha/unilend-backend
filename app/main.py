@@ -5,6 +5,7 @@ from app.routes import auth, items, borrow_request
 from app.models import user, item
 from app.models import borrow_request as borrow_request_model
 from app.routes import dashboard
+from app.routes import admin
 
 Base.metadata.create_all(bind=engine)
 
@@ -22,6 +23,7 @@ app.include_router(auth.router)
 app.include_router(items.router)
 app.include_router(borrow_request.router)
 app.include_router(dashboard.router)
+app.include_router(admin.router)
 
 @app.get("/")
 def root():
