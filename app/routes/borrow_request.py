@@ -4,13 +4,14 @@ from app.database import get_db
 from app.models.borrow_request import BorrowRequest, RequestStatus
 from app.models.item import Item, ItemStatus, RiskLevel
 from app.models.user import User
-from app.schemas.borrow_request import BorrowRequestCreate, BorrowRequestResponse, ReceivedRequestResponse, MyRequestResponse
+from app.schemas.borrow_request import BorrowRequestCreate, BorrowRequestResponse, ReceivedRequestResponse, MyRequestResponse, ReturnRequest
 from app.routes.auth import get_current_user
 from datetime import datetime, timedelta
 from uuid import UUID
 from typing import List
 from app.models.transaction import Transaction, TransactionStatus
 from app.services.trust import update_trust_score
+
 
 router = APIRouter(prefix="/borrow-requests", tags=["borrow requests"])
 
@@ -184,7 +185,7 @@ def get_received_requests(db: Session = Depends(get_db), current_user: User = De
     return result
 
 @router.put("/{request_id}/return", response_model=BorrowRequestResponse)
-def mark_returned(request_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def mark_returned(request_id: UUID, body: ReturnRequest = ReturnRequest(), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     # find the request
     borrow_request = db.query(BorrowRequest).filter(BorrowRequest.id == request_id).first()
     if not borrow_request:
@@ -210,6 +211,7 @@ def mark_returned(request_id: UUID, db: Session = Depends(get_db), current_user:
     # record the return and decide: on time or late?
     now = datetime.utcnow()
     transaction.returned_at = now
+    transaction.return_note = body.return_note
     if borrow_request.return_deadline and now > borrow_request.return_deadline:
         transaction.status = TransactionStatus.returned_late
     else:
@@ -229,3 +231,4 @@ def mark_returned(request_id: UUID, db: Session = Depends(get_db), current_user:
     db.commit()
     db.refresh(borrow_request)
     return borrow_request
+

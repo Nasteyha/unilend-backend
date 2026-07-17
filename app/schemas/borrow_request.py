@@ -43,5 +43,8 @@ class MyRequestResponse(BaseModel):
     lender_name: str
     lender_email: str
 
+class ReturnRequest(BaseModel):
+    return_note: str | None = None
+
     class Config:
         from_attributes = True

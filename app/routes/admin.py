@@ -65,6 +65,7 @@ def get_all_transactions(
             "returned_at": t.returned_at,
             "item_title": t.borrow_request.item.title,
             "borrower_name": t.borrow_request.borrower.full_name,
+            "return_note": t.return_note,
         }
         for t in transactions
     ]
