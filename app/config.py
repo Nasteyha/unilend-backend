@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     CLOUDINARY_CLOUD_NAME: str
     CLOUDINARY_API_KEY: str
     CLOUDINARY_API_SECRET: str
+    CORS_ORIGINS: str = "http://localhost:5173"
 
     class Config:
         env_file = ".env"
