@@ -31,6 +31,7 @@ class ReceivedRequestResponse(BaseModel):
     borrower_id: UUID
     borrower_name: str
     borrower_trust_score: int
+    borrower_email: str
 
 class MyRequestResponse(BaseModel):
     id: UUID
@@ -39,6 +40,8 @@ class MyRequestResponse(BaseModel):
     return_deadline: datetime | None
     item_id: UUID
     item_title: str
+    lender_name: str
+    lender_email: str
 
     class Config:
         from_attributes = True

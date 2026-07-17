@@ -95,6 +95,8 @@ def get_my_requests(db: Session = Depends(get_db), current_user: User = Depends(
             return_deadline=r.return_deadline,
             item_id=r.item_id,
             item_title=r.item.title,
+            lender_name=r.item.owner.full_name,
+            lender_email=r.item.owner.email,
         ))
     return result
 
@@ -177,6 +179,7 @@ def get_received_requests(db: Session = Depends(get_db), current_user: User = De
             borrower_id=r.borrower_id,
             borrower_name=r.borrower.full_name,
             borrower_trust_score=r.borrower.trust_score,
+            borrower_email=r.borrower.email,
         ))
     return result
 
