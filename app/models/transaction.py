@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, DateTime, ForeignKey, Boolean, Enum as SAEnum, String
+from sqlalchemy import Column, DateTime, ForeignKey, Boolean, Enum as SAEnum, String, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -21,5 +21,6 @@ class Transaction(Base):
     returned_at = Column(DateTime, nullable=True)
     condition_verified = Column(Boolean, nullable=False, default=False)
     return_note = Column(String, nullable=True)
+    lender_rating = Column(Integer, nullable=True)
 
     borrow_request = relationship("BorrowRequest")

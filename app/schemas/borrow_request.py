@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from uuid import UUID
 from datetime import datetime
 from enum import Enum
@@ -45,6 +45,7 @@ class MyRequestResponse(BaseModel):
 
 class ReturnRequest(BaseModel):
     return_note: str | None = None
+    lender_rating: int | None = Field(default=None, ge=1, le=5)
 
     class Config:
         from_attributes = True

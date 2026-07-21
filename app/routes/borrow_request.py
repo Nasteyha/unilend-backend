@@ -212,6 +212,7 @@ def mark_returned(request_id: UUID, body: ReturnRequest = ReturnRequest(), db: S
     now = datetime.utcnow()
     transaction.returned_at = now
     transaction.return_note = body.return_note
+    transaction.lender_rating = body.lender_rating
     if borrow_request.return_deadline and now > borrow_request.return_deadline:
         transaction.status = TransactionStatus.returned_late
     else:
@@ -226,7 +227,7 @@ def mark_returned(request_id: UUID, body: ReturnRequest = ReturnRequest(), db: S
     borrower = db.query(User).filter(User.id == borrow_request.borrower_id).first()
     update_trust_score(borrower, transaction)
 
-    db.commit()
+
 
     db.commit()
     db.refresh(borrow_request)
