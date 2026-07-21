@@ -39,17 +39,37 @@ def get_all_users(
     admin: User = Depends(require_admin),
 ):
     users = db.query(User).all()
-    return [
-        {
+    result = []
+    for u in users:
+        # every transaction where this user was the borrower, regardless of rating
+        borrower_transactions = (
+            db.query(Transaction)
+            .join(BorrowRequest, Transaction.borrow_request_id == BorrowRequest.id)
+            .filter(BorrowRequest.borrower_id == u.id)
+            .all()
+        )
+        completed_loans = sum(
+            1 for t in borrower_transactions
+            if t.status in (TransactionStatus.returned, TransactionStatus.returned_late)
+        )
+
+        rated_transactions = [t for t in borrower_transactions if t.lender_rating is not None]
+        if rated_transactions:
+            average_rating = sum(t.lender_rating for t in rated_transactions) / len(rated_transactions)
+        else:
+            average_rating = None
+
+        result.append({
             "id": str(u.id),
             "full_name": u.full_name,
             "email": u.email,
             "role": u.role,
             "trust_score": u.trust_score,
+            "average_rating": average_rating,
+            "completed_loans": completed_loans,
             "created_at": u.created_at,
-        }
-        for u in users
-    ]
+        })
+    return result
 
 @router.get("/transactions")
 def get_all_transactions(
